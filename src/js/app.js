@@ -58,7 +58,7 @@ angular.module('blocktrail.wallet').run(
     function($rootScope, $state, $q, $log, $interval, $timeout, CONFIG, $ionicPlatform, $ionicHistory, $cordovaNetwork,
              $analytics, $ionicSideMenuDelegate, $locale, $btBackButtonDelegate, $cordovaAppVersion,
              $cordovaStatusbar, settingsService, $window, $cordovaClipboard, $cordovaToast, $translate, $cordovaDevice,
-             amMoment, tuneTrackingService, trackingService, blocktrailLocalisation) {
+             amMoment, tuneTrackingService, trackingService, blocktrailLocalisation, gcmService, $cordovaPushV5) {
         $rootScope.CONFIG = CONFIG || {};
         $rootScope.$state = $state;
         $rootScope.$translate = $translate;
@@ -110,9 +110,14 @@ angular.module('blocktrail.wallet').run(
                 // register to get registrationId
                 $cordovaPushV5.register().then(function(registrationId) {
                     // save `registrationId` somewhere;
-                    console.log("regid:" + registrationId);
+                    console.log("Push ID:" + registrationId);
 
-                    gcmService.register(registrationId);
+                    gcmService.register(registrationId)
+                        .then(function () {
+                            console.log('Push register success')
+                        },function (e) {
+                            console.log('Push register failure', e);
+                        });
 
                     gcmService.enableNotifications($rootScope);
 

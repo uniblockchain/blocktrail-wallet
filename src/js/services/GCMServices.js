@@ -4,12 +4,7 @@ angular.module('blocktrail.wallet')
         var baseURL = CONFIG.PUSH_SRV_URL;
 
         var register = function(userId) {
-            $http.post(baseURL + '/register', {"id": userId.toString()})
-                .then(function success(res) {
-                    console.log(res);
-                }, function err(res) {
-                    console.log(res);
-                });
+            return $http.post(baseURL + '/register', {"id": userId.toString()});
         };
 
         var enableNotifications = function($rootScope) {
