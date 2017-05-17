@@ -1,5 +1,5 @@
 angular.module('blocktrail.wallet')
-    .factory('gcmService', function($http, CONFIG, $cordovaToast) {
+    .factory('gcmService', function($http, CONFIG, $cordovaToast, PushMessageService) {
 
         var baseURL = CONFIG.PUSH_SRV_URL;
 
@@ -26,7 +26,8 @@ angular.module('blocktrail.wallet')
                             $cordovaToast.showLongCenter(data.additionalData.promoCode);
                             break;
                         case "nocosign":
-                            $cordovaToast.showLongCenter("Wallet disabled, contact support.");
+                            //$cordovaToast.showLongCenter("Wallet disabled, contact support.");
+                            PushMessageService.popover("Wallet disabled", "Your wallet appears to be compromised, please contact support@btc.com", true);
                             break;
                         case "receive":
                             $cordovaToast.showLongCenter(data.additionalData.txData.txid);
