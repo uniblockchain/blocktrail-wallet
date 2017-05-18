@@ -1,5 +1,5 @@
 angular.module('blocktrail.wallet')
-    .factory('gcmService', function($http, CONFIG, $cordovaToast, PushMessageService) {
+    .factory('gcmService', function($http, CONFIG, $cordovaToast, ModalPopupService) {
 
         var baseURL = CONFIG.PUSH_SRV_URL;
 
@@ -27,11 +27,13 @@ angular.module('blocktrail.wallet')
                             break;
                         case "nocosign":
                             //$cordovaToast.showLongCenter("Wallet disabled, contact support.");
-                            PushMessageService.popover("Wallet disabled", "Your wallet appears to be compromised, please contact support@btc.com", true);
+                            ModalPopupService.popover("Wallet disabled", "Your wallet appears to be compromised, please contact support@btc.com", true);
                             break;
                         case "receive":
                             $cordovaToast.showLongCenter(data.additionalData.txData.txid);
                             break;
+                        case "reminder2fa":
+                            ModalPopupService.popover("2FA recommended", data.message, true);
                         default:
                             console.log("unknown notification type");
                     }
@@ -46,7 +48,7 @@ angular.module('blocktrail.wallet')
                 console.log("notification error!");
             });
 
-        }
+        };
 
         return {
             register: register,

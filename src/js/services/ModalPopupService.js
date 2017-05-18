@@ -1,10 +1,8 @@
 angular.module('blocktrail.wallet').factory(
-    'PushMessageService',
+    'ModalPopupService',
     function(settingsService, $state, $translate, CONFIG, $ionicPopover, $rootScope) {
 
         var popover = function(title, body, unclosable) {
-
-            console.log("well im here at least");
 
             var modalScope = $rootScope.$new(true);
             modalScope.body = body;
@@ -20,7 +18,7 @@ angular.module('blocktrail.wallet').factory(
                 modalScope.popover.destroy();
             };
 
-            return $ionicPopover.fromTemplateUrl('templates/misc/popover.pushmessage.html', {
+            return $ionicPopover.fromTemplateUrl('templates/misc/popover.modalpopup.html', {
                 scope: modalScope,
                 hardwareBackButtonClose: !unclosable
             }).then(function(popover) {
