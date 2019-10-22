@@ -5,16 +5,12 @@
         .controller("ReceiveCtrl", ReceiveCtrl);
 
     function ReceiveCtrl($scope, walletsManagerService, settingsService, CurrencyConverter, $q, $cordovaClipboard, $cordovaEmailComposer,
-                          $timeout, $btBackButtonDelegate, $translate, $cordovaSms, $log, $cordovaToast, CONFIG) {
+                          $timeout, $btBackButtonDelegate, $cordovaSocialSharing, $translate, $log, $cordovaToast, CONFIG) {
 
+        var activeWallet = walletsManagerService.getActiveWallet();
         var walletData = walletsManagerService.getActiveWalletReadOnlyData();
 
         $scope.networkLong = CONFIG.NETWORKS[walletData.networkType].NETWORK_LONG;
-        $scope.address = null;
-        $scope.path = null;
-        $scope.bitcoinUri = null;
-        $scope.qrcode = null;
-
         $scope.newRequest = {
             address: null,
             path: null,
@@ -25,6 +21,8 @@
         };
         //control status of the app (allows for child scope modification)
         $scope.appControl = {
+            showCashOption: CONFIG.NETWORKS[walletData.networkType].CASHADDRESS,
+            useCashAddress: CONFIG.NETWORKS[walletData.networkType].CASHADDRESS,
             working: false,
             showMessage: false,
             showRequestOptions: false
@@ -63,18 +61,44 @@
             //$scope.newRequest.btcValue.$setDirty();    //ideally set the other input to dirty as well
         };
         $scope.newAddress = function() {
-            $q.when(walletsManagerService.getActiveWallet().getNewAddress()).then(function(address) {
+            var chainIdx = null;
+            if (walletData.networkType === "BCC") {
+                chainIdx = blocktrailSDK.Wallet.CHAIN_BCC_DEFAULT;
+            } else if (walletData.networkType === "BTC") {
+                chainIdx = blocktrailSDK.Wallet.CHAIN_BTC_DEFAULT;
+            }
+
+            $q.when(walletsManagerService.getActiveWallet().getNewAddress(chainIdx)).then(function(address) {
                 $scope.newRequest.address = address;
             });
         };
+
+        window.myscope = $scope;
+        $scope.$watch("appControl.useCashAddress", function(newValue, oldValue) {
+            if (newValue !== oldValue && $scope.newRequest.address) {
+                var sdk = activeWallet.getSdkWallet().sdk;
+                if (newValue) {
+                    $scope.newRequest.address = sdk.getCashAddressFromLegacyAddress($scope.newRequest.address);
+                } else {
+                    $scope.newRequest.address = sdk.getLegacyBitcoinCashAddress($scope.newRequest.address);
+                }
+            }
+        });
 
         $scope.generateQR = function() {
             if (!$scope.newRequest.address) {
                 return false;
             }
 
-            $scope.newRequest.bitcoinUri = CONFIG.NETWORKS[walletData.networkType].URI_PREFIX + ":" + $scope.newRequest.address;
+            var prefix = CONFIG.NETWORKS[walletData.networkType].URIPREFIX;
+            if (CONFIG.NETWORKS[walletData.networkType].CASHADDRESS) {
+                prefix = "";
+                if (!$scope.appControl.useCashAddress) {
+                    prefix = CONFIG.NETWORKS[walletData.networkType].URIPREFIX;
+                }
+            }
 
+            $scope.newRequest.bitcoinUri = prefix + $scope.newRequest.address;
             if ($scope.newRequest.btcValue) {
                 $scope.newRequest.bitcoinUri += "?amount=" + $scope.newRequest.btcValue.toFixed(8);
             }
@@ -175,23 +199,24 @@
                 });
         };
 
-        $scope.toSMS = function() {
+        $scope.shareLink = function() {
             var params = {
                 address: $scope.newRequest.address,
                 btcValue: $scope.newRequest.btcValue,
                 fiatValue: $scope.newRequest.fiatValue,
-                localCurrency: $scope.settingsData.localCurrency
+                localCurrency: $scope.settingsData.localCurrency,
+                network: CONFIG.NETWORKS[walletData.networkType].TICKER,
+                networkLong: CONFIG.NETWORKS[walletData.networkType].TICKER_LONG
             };
 
-            var smsMessage = $scope.newRequest.btcValue ? $translate.instant('MSG_REQUEST_SMS_2', params) : $translate.instant('MSG_REQUEST_SMS_1', params);
+            var message = $scope.newRequest.btcValue ? $translate.instant('MSG_REQUEST_SMS_2', params) : $translate.instant('MSG_REQUEST_SMS_1', params);
+            var message = message + "\n\n";
 
-            return $cordovaSms.send('', smsMessage, $scope.smsOptions)
-                .then(function() {
-                    $scope.hideExportOptions();
-                })
-                .catch(function(err) {
-                    // An error occurred
-                    $log.error(err);
+            // Share via native share sheet
+            return $cordovaSocialSharing
+                .share(message, "", null, $scope.newRequest.bitcoinUri)
+                .then(function(result) {}, function(err) {
+                    $log.error("LinkSharing: " + err.message);
                 });
         };
 

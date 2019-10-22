@@ -2,7 +2,7 @@
     <ion-nav-title class="">{{ 'MY_WALLET' | translate }}</ion-nav-title>
 
     <ion-nav-buttons side="right">
-        <div class="button button-clear button-quickscan" nav-direction="forward" ui-sref="app.wallet.send.qrcode({backdrop: true})"><i class="icon-qrcode"></i></div>
+        <div class="button button-clear button-quickscan" nav-direction="forward" ui-sref="app.wallet.send.qrcode({promoCodeRedeem: true})"><i class="icon-qrcode"></i></div>
     </ion-nav-buttons>
 
     <div class="bar bar-subheader wallet-info">
@@ -12,7 +12,7 @@
                 <i class="icon ion-person" ng-if="!settingsData.profilePic"></i>
             </div>
         </div>
-        <div class="wallet-info-description">
+        <div class="wallet-info-description" ng-show="!isLoading">
             <h1 ng-bind-html="((walletData.balance + walletData.uncBalance) | satoshiToCoin : walletData.networkType : localSettingsData.btcPrecision : true : 'short')"></h1>
             <p>{{ (walletData.balance + walletData.uncBalance) | satoshiToCurrency : settingsData.localCurrency : bitcoinPrices }}</p>
         </div>
@@ -31,7 +31,7 @@
             <ion-spinner></ion-spinner>
         </div>
 
-        <ion-list class="transactions-list">
+        <ion-list class="transactions-list" ng-show="!isLoading">
             <div ng-if="buyBtcPendingOrders.length > 0">
                 <!-- Show header -->
                 <div>

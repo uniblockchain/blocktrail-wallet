@@ -29,7 +29,7 @@
         var self = this;
 
         return self._sdkService.getGenericSdk()
-            .getAllWallets({mywallet: 1, limit: 200})
+            .getAllWallets(!!self._CONFIG.DEBUG)
             .then(function(result) {
                 return self._launchService.getWalletConfig()
                     .then(function(walletConfig) {
@@ -45,6 +45,7 @@
 
                 self._walletsList = [];
                 list.forEach(function(wallet) {
+                    wallet.network = wallet.network.replace(/BCH$/, 'BCC');
                     if (self._CONFIG.NETWORKS_ENABLED.indexOf(wallet.network) !== -1 && disabledNetworks.indexOf(wallet.network) === -1) {
                         // Add unique id
                         wallet.uniqueIdentifier = self._getWalletUniqueIdentifier(wallet.network, wallet.identifier);

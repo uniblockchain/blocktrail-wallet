@@ -7,6 +7,7 @@ var ngAnnotate = require('gulp-ng-annotate');
 var concat = require('gulp-concat');
 var sass = require('gulp-sass');
 var minifyCss = require('gulp-minify-css');
+var sourcemaps = require('gulp-sourcemaps');
 var rename = require('gulp-rename');
 var xml2js = require('xml2js');
 var sh = require('shelljs');
@@ -27,6 +28,7 @@ var html2js = require('gulp-html2js');
 var rootdir = __dirname;
 var isWatch = false;
 var noFontello = process.argv.indexOf('--no-fontello') !== -1 || process.argv.indexOf('--nofontello') !== -1;
+var DONT_MANGLE = ['Buffer', 'BigInteger', 'Point', 'Script', 'ECPubKey', 'ECKey', 'sha512_asm', 'asm', 'ECPair', 'HDNode', 'ngRaven'];
 
 /**
  * helper to wrap a stream with a promise for easy chaining
@@ -225,7 +227,11 @@ gulp.task('js:ng-cordova', ['appconfig'], function() {
 
         return streamAsPromise(gulp.src(files)
             .pipe(concat('ng-cordova.js'))
-            .pipe(gulpif(APPCONFIG.MINIFY, uglify()))
+            .pipe(gulpif(APPCONFIG.MINIFY, uglify({
+                mangle: {
+                    except: DONT_MANGLE
+                }
+            })))
             .pipe(gulp.dest('./www/js/'))
         );
     });
@@ -267,10 +273,19 @@ gulp.task('js:libs', ['appconfig'], function() {
             "./src/lib/angular-moment/angular-moment.js",
             "./src/lib/ngImgCrop/compile/unminified/ng-img-crop.js",
             "./src/lib/qrcode/lib/qrcode.js",
-            "./src/lib/angular-qr/src/angular-qr.js"
+            "./src/lib/angular-qr/src/angular-qr.js",
+            "./src/lib/raven-js/dist/raven.js",
+            "./src/lib/raven-js/dist/plugins/angular.js",
+            "./src/lib/bip70-js/build/bip70.js"
         ])
+            .pipe(sourcemaps.init({largeFile: true}))
             .pipe(concat('libs.js'))
-            .pipe(gulpif(APPCONFIG.MINIFY, uglify()))
+            .pipe(gulpif(APPCONFIG.MINIFY, uglify({
+                mangle: {
+                    except: DONT_MANGLE
+                }
+            })))
+            .pipe(sourcemaps.write('./'))
             .pipe(gulp.dest('./www/js/'))
         );
     });
@@ -282,6 +297,7 @@ gulp.task('js:app', ['appconfig'], function() {
         return streamAsPromise(gulp.src([
             './src/js/**/*.js',
         ])
+            .pipe(sourcemaps.init({largeFile: true}))
             .pipe(concat('app.js'))
             .pipe(ngAnnotate())
             .on('error', function(e) {
@@ -296,7 +312,12 @@ gulp.task('js:app', ['appconfig'], function() {
                     throw e;
                 }
             })
-            .pipe(gulpif(APPCONFIG.MINIFY, uglify()))
+            .pipe(gulpif(APPCONFIG.MINIFY, uglify({
+                mangle: {
+                    except: DONT_MANGLE
+                }
+            })))
+            .pipe(sourcemaps.write('./'))
             .pipe(gulp.dest('./www/js/'))
         );
     });
@@ -309,12 +330,14 @@ gulp.task('js:sdk', ['appconfig'], function() {
         return streamAsPromise(gulp.src([
             "./src/lib/blocktrail-sdk/build/blocktrail-sdk-full.js"
         ])
+            .pipe(sourcemaps.init({largeFile: true}))
             .pipe(concat('sdk.js'))
             .pipe(gulpif(APPCONFIG.MINIFY, uglify({
                 mangle: {
-                    except: ['Buffer', 'BigInteger', 'Point', 'Script', 'ECPubKey', 'ECKey', 'ECPair', 'HDNode']
+                    except: DONT_MANGLE
                 }
             })))
+            .pipe(sourcemaps.write('./'))
             .pipe(gulp.dest('./www/js/'))
         );
     });
@@ -326,7 +349,9 @@ gulp.task('js:sdk:asmcrypto', ['appconfig'], function() {
         return streamAsPromise(gulp.src([
                 "./src/lib/blocktrail-sdk/build/asmcrypto.js"
             ])
+                .pipe(sourcemaps.init({largeFile: true}))
                 .pipe(concat('asmcrypto.js'))
+                .pipe(sourcemaps.write('./'))
                 .pipe(gulp.dest('./www/js/'))
         );
     });

@@ -6,7 +6,7 @@
 
     function ContactsListCtrl($scope, $state, $q, Contacts, $timeout, $translate,
                       $ionicScrollDelegate, $ionicActionSheet, $ionicLoading, $cordovaDialogs,
-                      $log, $cordovaSms, localSettingsService) {
+                      $log, localSettingsService) {
 
         var localSettingsData = localSettingsService.getReadOnlyLocalSettingsData();
 
@@ -31,7 +31,7 @@
                     'OK',
                     'CANCEL',
                     'ERROR',
-                    'CONTACTS_FILTER_TITLE',
+                    'ADVANCED_SEND_OPTIONS',
                     'CONTACTS_SHOW_ALL',
                     'CONTACTS_WALLETS_ONLY',
                     'CONTACTS_RESYNC',
@@ -51,36 +51,32 @@
             $scope.getTranslations().then(function(transactions) {
                 $scope.hideFilterOptions = $ionicActionSheet.show({
                     buttons: [
-                        { text: transactions['CONTACTS_SHOW_ALL'].sentenceCase() },
-                        { text: transactions['CONTACTS_WALLETS_ONLY'].sentenceCase() }
+                        { text: transactions['CONTACTS_RESYNC'].sentenceCase() }
                     ],
                     cancelText: transactions['CANCEL'].sentenceCase(),
-                    titleText: transactions['CONTACTS_FILTER_TITLE'].sentenceCase(),
-                    destructiveText: transactions['CONTACTS_RESYNC'].sentenceCase(),
+                    titleText: transactions['ADVANCED_SEND_OPTIONS'].sentenceCase(),
+                    destructiveText: transactions['CANCEL'].sentenceCase(),
                     cancel: function() {},
                     buttonClicked: function(index) {
                         if (index == 0) {
-                            $scope.contactsWithWalletOnly = false;
-                            $scope.contactsWithPhoneOnly = true;
-                            //$scope.contactsWithEmailOnly = false;
-                        }
-                        else if (index == 1) {
+                            $ionicLoading.show({template: "<div>{{ 'WORKING' | translate }}...</div><ion-spinner></ion-spinner>", hideOnStateChange: true});
+                            $scope.reloadContacts()
+                                .then(function() {
+                                    $ionicLoading.hide();
+                                }, function(err) {
+                                    $ionicLoading.hide();
+                                    return $cordovaDialogs.alert(err.toString(), $scope.translations['ERROR'].sentenceCase(), $scope.translations['OK']);
+                                });
+                            return true;
+
                             $scope.contactsWithWalletOnly = true;
-                            $scope.contactsWithPhoneOnly = true;
+                            $scope.contactsWithPhoneOnly = false;
                             //$scope.contactsWithEmailOnly = false;
                         }
                         $scope.getContacts();
                         return true;
                     },
                     destructiveButtonClicked: function() {
-                        $ionicLoading.show({template: "<div>{{ 'WORKING' | translate }}...</div><ion-spinner></ion-spinner>", hideOnStateChange: true});
-                        $scope.reloadContacts()
-                            .then(function() {
-                                $ionicLoading.hide();
-                            }, function(err) {
-                                $ionicLoading.hide();
-                                return $cordovaDialogs.alert(err.toString(), $scope.translations['ERROR'].sentenceCase(), $scope.translations['OK']);
-                            });
                         return true;
                     }
                 });
@@ -192,16 +188,6 @@
                 $timeout(function() {
                     $state.go('^');
                 }, 300);
-            } else {
-                //otherwise invite them
-                $scope.getTranslations()
-                    .then(function() {
-                        return $cordovaSms.send(contact.phoneNumbers[0].number, $scope.translations['MSG_INVITE_CONTACT'], $scope.smsOptions);
-                    })
-                    .catch(function(err) {
-                        // An error occurred
-                        $log.error(err);
-                    });
             }
         };
 

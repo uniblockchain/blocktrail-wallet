@@ -80,8 +80,10 @@
             }
 
             return modalService.prompt({
-                    placeholder: "SETUP_PASSWORD_REPEAT_PLACEHOLDER",
-                    preFill: CONFIG.DEBUG_PASSWORD_PREFILL || ""
+                    title: "SETUP_PASSWORD_REPEAT_PLACEHOLDER",
+                    placeholder: "SETUP_PASSWORD_PLACEHOLDER",
+                    preFill: CONFIG.DEBUG_PASSWORD_PREFILL || "",
+                    focusFirstInput: true
                 })
                 .then(function(dialogResult) {
                     if (dialogResult !== null) {

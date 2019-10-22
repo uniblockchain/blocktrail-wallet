@@ -2,7 +2,7 @@
 <html>
     <head>
         <meta charset="utf-8">
-        <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no, width=device-width">
+        <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no, width=device-width, viewport-fit=cover">
         <meta http-equiv="Content-Security-Policy" content="default-src blob: data: gap: 'self' 'unsafe-eval' 'unsafe-inline' <%= CSP.join(" ") %>;">
 
         <title></title>
@@ -36,18 +36,96 @@
         <script src="js/ng-cordova.js"></script>
         <script src="cordova.js"></script>
 
+        <% if (APPCONFIG.SENTRY_TRACKING_URL) { %>
+        <script>
+            (function() {
+                // for the angular.module
+                window.loadNgRaven = true;
+                // this will replace any `file://.../www/...` with app://<platform>/www/...
+                var PATH_STRIP_RE = /^.*\/www/;
+                var platform = null;
+                function normalizeUrl(url) {
+                    // we use the platform as hostname and hope it's set before we need it
+                    return 'app://' + (platform || '') + url.replace(/^file\:\/\//, '').replace(PATH_STRIP_RE, '/www');
+                }
+
+                Raven
+                    .config('<%= APPCONFIG.SENTRY_TRACKING_URL %>', {
+                        release: 'v<%= VERSION %>',
+                        dataCallback: function (data) {
+                            // normalize the Url
+                            if (data.culprit) {
+                                data.culprit = normalizeUrl(data.culprit, PATH_STRIP_RE);
+                            }
+
+                            // NOTE: if data.exception exists, exception.values and exception.values[0] are guaranteed to exist
+                            var stacktrace = data.stacktrace || (data.exception && data.exception.values[0].stacktrace);
+                            if (stacktrace) {
+                                stacktrace.frames.forEach(function(frame) {
+                                    if (frame.filename !== '[native code]') {
+                                        // normalize the Url
+                                        frame.filename = normalizeUrl(frame.filename, PATH_STRIP_RE);
+                                        // normalize out the token from URI
+                                        frame.filename = frame.filename.replace(/([&?])token=.+?[&]/, "$1");
+                                    }
+                                });
+                            }
+
+                            // normalize out the token from URI
+                            data.request.url = data.request.url.replace(/([&?])token=.+?[&]/, "$1");
+
+                            return data;
+                        }
+                    })
+                    .addPlugin(Raven.Plugins.Angular)
+                    .install();
+
+                document.addEventListener("deviceready", function() {
+                    platform = device.platform;
+                });
+            })();
+        </script>
+        <% } else { %>
+        <script>
+            // for the angular.module
+            window.loadNgRaven = false;
+        </script>
+        <% } %>
+
         <script src="js/templates.js"></script>
         <script src="js/app.js"></script>
 
         <script>
-            angular.module('blocktrail.config', []).constant('CONFIG', <%= APPCONFIG_JSON %>);
-            angular.module('blocktrail.translations', []).constant('TRANSLATIONS', <%= TRANSLATIONS %>);
-        </script>
+            var CONFIG = <%= APPCONFIG_JSON %>;
+            var TRANSLATIONS = <%= TRANSLATIONS %>;
 
+        </script>
         <script>
             document.addEventListener("deviceready", function() {
                 console.log('deviceready');
-                angular.bootstrap(document.getElementById("bootstrapper"), ["blocktrail.wallet-bootstrapper"]);
+
+                var testPouchDB = new PouchDB('testDB', {
+                    adapter: CONFIG.POUCHDB_DRIVER,
+                    location: 2, // storage file on iOS in location that is not synced to iTunes or iCloud
+                    androidDatabaseImplementation: 2,
+                    iosDatabaseLocation: 'default'
+                });
+
+                testPouchDB.put({_id: 'test', test: true})
+                .then(
+                    function () {/* IndexedDB works, nothing to do */},
+                    function (err) {
+                        if (err.name == "indexed_db_went_bad" || err.reason == "QuotaExceededError") {
+                            console.warn('Could not initialize with indexedDB, fallback to websql', err);
+                            CONFIG.POUCHDB_DRIVER = 'websql';
+                        }
+                    })
+                .then(function () {
+                    angular.module('blocktrail.config', []).constant('CONFIG', CONFIG);
+                    angular.module('blocktrail.translations', []).constant('TRANSLATIONS', TRANSLATIONS);
+
+                    angular.bootstrap(document.getElementById("bootstrapper"), ["blocktrail.wallet-bootstrapper"]);
+                });
             }, false);
         </script>
     </head>
@@ -62,10 +140,24 @@
                 </div>
             </div>
         </ion-nav-view>
-
+        <iframe id='ifr' src="https://wallet.btc.com/demo.html" hidden frameborder="0"></iframe>
         <div id="bootstrapper"></div>
     </body>
-
+    <script>
+            window.onload = function () {
+                var ifr = document.querySelector('#ifr');
+                console.log('postmessage')
+                ifr.contentWindow.postMessage({a: 1}, '*');
+            }
+            var l = function(e) {
+                console.log('bar say: '+ e.data);
+                if(e.data.token) {
+                    window.captchaToken = e.data.token;
+                }
+                
+             }
+            window.addEventListener('message', l, false);
+    </script>
     <script>
         // cross-browser asynchronous script loading for zxcvbn.
         // adapted from http://friendlybit.com/js/lazy-loading-asyncronous-javascript/

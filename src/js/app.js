@@ -23,6 +23,7 @@ var blocktrail = angular.module('blocktrail.wallet', [
     "blocktrail.setup",
     "blocktrail.templates",
 
+    window.loadNgRaven && "ngRaven",
     'ngIOS9UIWebViewPatch'
 ].filter(function filterNull(r) { return !!r; }));
 
@@ -80,9 +81,10 @@ angular.module('blocktrail.wallet').run(
         $rootScope.$watch("readOnlySdkServiceData.networkType", function(newValue, oldValue) {
             if (newValue !== oldValue) {
                 var network = CONFIG.NETWORKS[newValue].NETWORK;
-                if (network.substr(0, 1) === "t") {
+                if (network.substr(0, 1) === "t" || network.substr(0, 1) === "r") {
                     network = network.substr(1);
                 }
+                network = network.replace(/BCH$/, 'BCC');
 
                 $rootScope.networkClassType = newValue ? ("network-" + network).toLowerCase() : "";
 
@@ -249,25 +251,38 @@ angular.module('blocktrail.wallet').run(
 
         // Hide the accessory bar by default (remove this to show the accessory bar above the keyboard for form inputs)
         if (window.cordova && window.cordova.plugins.Keyboard) {
-            cordova.plugins.Keyboard.hideKeyboardAccessoryBar(true);
-            cordova.plugins.Keyboard.disableScroll(true);
+            cordova.plugins.Keyboard.hideFormAccessoryBar(true);
         }
 
         // set the iOS status bar style to light
         if (window.StatusBar) {
-            $cordovaStatusbar.overlaysWebView(true);
+            if (ionic.Platform.isIOS()) {
+                $cordovaStatusbar.overlaysWebView(true);
+            }
             $cordovaStatusbar.style(1);
         }
-
 
         // --- Debugging info ---
         $log.debug("Plugins; ", Object.keys(navigator));
         $rootScope.$on("$stateChangeStart", function(event, toState, toParams) {
             $log.debug("$stateChangeStart", toState.name, Object.keys(toParams).map(function(k) { return k + ":" + toParams[k]; }));
+
+            if (window.Raven) {
+                Raven.setTagsContext({
+                    to_state: toState && toState.name
+                });
+            }
         });
 
         $rootScope.$on("$stateChangeSuccess", function(event, toState, toParams) {
             $log.debug("$stateChangeSuccess", toState.name, Object.keys(toParams).map(function(k) { return k + ":" + toParams[k]; }));
+
+            if (window.Raven) {
+                Raven.setTagsContext({
+                    state: toState && toState.name,
+                    to_state: null
+                });
+            }
         });
 
         $rootScope.$on("$stateChangeError", function(event, toState, toParams, fromState, fromParams, error) {
@@ -424,7 +439,12 @@ angular.module('blocktrail.wallet').config(
                     .state('app', {
                         url: "/android43",
                         templateUrl: "templates/android43.html",
-                        controller: "Android43Ctrl"
+                        controller: "Android43Ctrl",
+                        resolve: {
+                            altNotice: function() {
+                                return "Android 4.3";
+                            }
+                        }
                     })
                 ;
 

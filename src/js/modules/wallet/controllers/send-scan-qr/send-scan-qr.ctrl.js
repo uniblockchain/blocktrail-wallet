@@ -4,80 +4,97 @@
     angular.module("blocktrail.wallet")
         .controller("SendScanQRCtrl", SendScanQRCtrl);
 
-    function SendScanQRCtrl($scope, $rootScope, $state, QR, $log, $btBackButtonDelegate, $timeout,
-                            $ionicHistory, $cordovaToast, $ionicLoading) {
+    function SendScanQRCtrl($scope, $rootScope, $state, QR, $log, $timeout, $translate, modalService, $ionicHistory, $btBackButtonDelegate,
+                            $cordovaToast, $ionicLoading, bitcoinLinkService, walletsManagerService, $stateParams) {
         //remove animation for next state - looks kinda buggy
         $ionicHistory.nextViewOptions({
             disableAnimate: true
         });
 
-        $ionicLoading.show({template: "<div>{{ 'LOADING' | translate }}...", hideOnStateChange: true});
+        $ionicLoading.show({template: "<div>{{ 'LOADING' | translate }}...</div>", hideOnStateChange: true});
 
         //wait for transition, then open the scanner and begin scanning
-        $timeout(function() {
-            QR.scan(
-                function(result) {
-                    $log.debug('scan done', result);
-                    // bitcoin cash ppl care so little for standards or consensus that we actually need to do this ...
-                    result = result.replace(/^bitcoin cash:/, 'bitcoincash:');
+        QR.scan(
+            function(result) {
+                $log.debug('scan done', result);
+                // bitcoin cash ppl care so little for standards or consensus that we actually need to do this ...
+                result = result.replace(/^bitcoin cash:/, 'bitcoincash:');
+                $ionicLoading.hide();
 
-                    $log.debug('scan done', result);
-                    $ionicLoading.hide();
-
+                // Handle cancelled stage
+                if (result.toLowerCase() !== "cancelled") {
                     //parse result for address and value
                     var elm = angular.element('<a>').attr('href', result )[0];
 
                     $log.debug(elm.protocol, elm.pathname, elm.search, elm.hostname);
 
-                    if (result.toLowerCase() === "cancelled") {
-                        //go back
-                        $timeout(function() {$btBackButtonDelegate.goBack();}, 180);
-                    } else if (elm.protocol === 'btccomwallet:') {
+                    // Handle promocodes
+                    if (elm.protocol === 'btccomwallet:') {
                         var reg = new RegExp(/btccomwallet:\/\/promocode\?code=(.+)/);
                         var res = result.match(reg);
 
-                        $state.go('app.wallet.promo', {code: res[1]})
+                        $state.go('app.wallet.promo', {code: res[1]});
 
                     } else if (elm.protocol === 'bitcoincash:' && $rootScope.NETWORK === "BTC") {
                         throw new Error("Can't send to Bitcoin Cash address with BTC wallet");
                     } else if (elm.protocol === 'bitcoin:' || elm.protocol === 'bitcoincash:') {
                         $scope.clearRecipient();
-                        $scope.sendInput.recipientAddress = elm.pathname;
-                        $scope.sendInput.recipientDisplay = elm.pathname;
-                        $scope.sendInput.recipientSource = 'ScanQR';
-                        //check for bitcoin amount in qsa
-                        if (elm.search) {
-                            var reg = new RegExp(/amount=([0-9]*.[0-9]*)/);
-                            var amount = elm.search.match(reg);
-                            if (amount && amount[1]) {
-                                $scope.sendInput.btcValue = parseFloat(amount[1]);
-                                $scope.setFiat();
+                        bitcoinLinkService.parse(result).then(function (sendInput) {
+                            if(sendInput && (sendInput.network === 'bitcoin' || sendInput.network === 'bitcoincash')) {
+                                $state.go('app.wallet.send', {
+                                    sendInput: sendInput
+                                });
+                            } else {
+                                $cordovaToast.showLongTop($translate.instant("MSG_INVALID_RECIPIENT").sentenceCase());
+                                goBackOnIOSonCancel();
                             }
-                        }
-
-                        //go to parent "send qr" state to continue with send process
-                        $state.go('^');
+                        });
+                    } else {
+                        walletsManagerService.getActiveWallet().validateAddress(result)
+                            .then(function () {
+                                $state.go('app.wallet.send', {
+                                    sendInput: {
+                                        recipientDisplay: result,
+                                        recipientAddress: result
+                                    }
+                                });
+                            })
+                            .catch(function () {
+                                $timeout(function() {
+                                    modalService.alert({
+                                        title: "ERROR_TITLE_3",
+                                        body: "MSG_INVALID_RECIPIENT"
+                                    });
+                                }, 180);
+                            });
                     }
-                    else {
-                        //no bitcoin protocol, set address as full string
-                        $scope.clearRecipient();
-                        $scope.sendInput.recipientAddress = result;
-                        $scope.sendInput.recipientDisplay = result;
-                        $scope.sendInput.recipientSource = 'ScanQR';
-                        $state.go('^');
+                } else {
+                    if ($stateParams.promoCodeRedeem) {
+                        $timeout(function () {
+                            $state.go("app.wallet.summary")
+                        }, 300);
+                    } else {
+                        goBackOnIOSonCancel();
                     }
-                },
-                function(error) {
-                    $log.error(error);
-                    $log.error("Scanning failed: " + error);
-
-                    $ionicLoading.hide();
-                    $cordovaToast.showLongTop("Scanning failed: " + error);
-                    $scope.appControl.isScanning = false;
-
-                    $timeout(function() {$btBackButtonDelegate.goBack();}, 180);
                 }
-            );
-        }, 350);
+            },
+            function(error) {
+                $log.error("Scanning failed: " + error);
+                $ionicLoading.hide();
+                if (error.message === "Scan is already in progress") {
+                    return;
+                }
+                $scope.appControl.isScanning = false;
+
+                goBackOnIOSonCancel();
+                $cordovaToast.showLongTop("Scanning failed: " + error);
+            }
+        );
+
+        function goBackOnIOSonCancel() {
+            if (ionic.Platform.isIOS()) {
+                $btBackButtonDelegate.goBack();
+            }
+        }
     }
 })();

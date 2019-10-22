@@ -31,7 +31,7 @@ npm install -g npm # make sure npm is latest version
 
 # engine_strict=false is required because cordova -> cordova-common -> plist -> xmlbuilder@2.2.1
 # next version of plist will use xmlbuilder@3.x which will fix this isse
-npm_config_engine_strict=false npm install -g ionic@2.2.1 cordova@6.5.0 gulp
+npm_config_engine_strict=false npm install -g ionic@4.3.1 cordova@8.1.2 gulp
 
 npm install
 git submodule update --init --recursive # for translations package
@@ -42,7 +42,7 @@ gulp
 
 ## Run
 ```
-ionic run android|ios
+ionic cordova run android|ios
 ```
 
 ## Translations
@@ -64,22 +64,23 @@ cp appconfig.prod.json appconfig.json
 edit `config.xml` and bump the version
 
 ### Ionic prepare
-run `ionic prepare` for the version update to take effect and `git commit` any and all changes with "vX.Y.Z".  
+run `ionic cordova prepare` for the version update to take effect and `git commit` any and all changes with "vX.Y.Z".  
 tag the release as well in git at this point.
+
+### Push to SentryIO
+push the source files to sentryIO, make sure to pass it the right versionnumber and do this on BOTH platforms!
+```
+node pushsentryio.js <Android|iOS> <VERSIONNUMBER>
+```
 
 ### Android
 ```
 mv appconfig.json .appconfig.json
 cp appconfig.prod.json appconfig.json
 
-# change config.xml to bump version
-ionic prepare
-# you should commit and tag here...
-git commit -am "v1.0.x"; git tag v1.0.x
-
 rm -rf platforms/android/build/outputs/apk/* # clean up old builds
 
-ionic build android --release 
+ionic cordova build android --release 
 
 jarsigner -verbose -sigalg SHA1withRSA -digestalg SHA1 -keystore ~/keys/blocktrail.keystore /work/blocktrail-wallet/platforms/android/build/outputs/apk/android-release-unsigned.apk blocktrail  
 
@@ -93,7 +94,7 @@ mv .appconfig.json appconfig.json
 mv appconfig.json .appconfig.json
 cp appconfig.prod.json appconfig.json
 
-ionic prepare ios
+ionic cordova prepare ios
 ```
 
 In xCode:

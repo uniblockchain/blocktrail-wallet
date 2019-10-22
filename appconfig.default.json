@@ -4,7 +4,7 @@
     "MINIFY": true,
     "NG_CORDOVA_MOCKS": false,
     "POUCHDB_DRIVER": null,
-    "API_HOST": "api.blocktrail.com",
+    "API_HOST": "wallet-api.btc.com",
     "API_HTTPS": true,
 
     "STORAGE_VERSION": "v3",
@@ -20,11 +20,15 @@
     "CURRENCIES": ["USD", "EUR", "GBP", "AUD", "BTC", "CNY"],
 
     "CSP": [
-        "https://api.blocktrail.com",
+        "https://wallet-api.btc.com",
         "https://www.glidera.io",
         "https://sandbox.glidera.io",
         "https://buy.btc.com",
-        "https://checkout.simplexcc.com"
+        "https://chain.api.btc.com",
+        "https://bch-chain.api.btc.com",
+        "https://checkout.simplexcc.com",
+        "https://sentry.io",
+        "https://bitpay.com"
     ],
 
     "GLIDERA_URL": "https://www.glidera.io",
@@ -75,7 +79,8 @@
             "PRIOBOOST": true,
             "EXPLORER_ADDRESS_URL": "https://btc.com",
             "EXPLORER_TX_URL": "https://btc.com",
-            "URI_PREFIX": "bitcoin"
+            "CASHADDRESS": false,
+            "URIPREFIX": "bitcoin:"
         },
         "BCC": {
             "NETWORK": "BCC",
@@ -87,7 +92,8 @@
             "PRIOBOOST": false,
             "EXPLORER_ADDRESS_URL": "https://bch.btc.com",
             "EXPLORER_TX_URL": "https://bch.btc.com",
-            "URI_PREFIX": "bitcoincash"
+            "CASHADDRESS": true,
+            "URIPREFIX": "bitcoincash:"
         },
         "tBTC": {
             "NETWORK": "tBTC",
@@ -99,7 +105,8 @@
             "PRIOBOOST": false,
             "EXPLORER_ADDRESS_URL": "https://tchain.btc.com",
             "EXPLORER_TX_URL": "https://tchain.btc.com",
-            "URI_PREFIX": "bitcoin"
+            "CASHADDRESS": false,
+            "URIPREFIX": "bitcoin:"
         },
         "tBCC": {
             "NETWORK": "tBCC",
@@ -111,7 +118,34 @@
             "PRIOBOOST": false,
             "EXPLORER_ADDRESS_URL": "https://www.blocktrail.com/tBCC/address",
             "EXPLORER_TX_URL": "https://www.blocktrail.com/tBCC/tx",
-            "URI_PREFIX": "bitcoincash"
+            "CASHADDRESS": true,
+            "URIPREFIX": "bchtest:"
+        },
+        "rBTC": {
+            "NETWORK": "rBTC",
+            "NETWORK_LONG": "Bitcoin REGTEST",
+            "TICKER": "rBTC",
+            "TICKER_LONG": "Bitcoin REGTEST",
+            "TX_FILTER_MIN_BLOCK_HEIGHT": null,
+            "BUYBTC": true,
+            "PRIOBOOST": false,
+            "EXPLORER_ADDRESS_URL": "https://tchain.btc.com",
+            "EXPLORER_TX_URL": "https://tchain.btc.com",
+            "URI_PREFIX": "bitcoin"
+        },
+        "rBCC": {
+            "NETWORK": "rBCC",
+            "NETWORK_LONG": "Bitcoin Cash REGTEST",
+            "TICKER": "rBCH",
+            "TICKER_LONG": "Bitcoin Cash REGTEST",
+            "TX_FILTER_MIN_BLOCK_HEIGHT": null,
+            "BUYBTC": true,
+            "PRIOBOOST": false,
+            "EXPLORER_ADDRESS_URL": "https://www.blocktrail.com/tBCC/address",
+            "EXPLORER_TX_URL": "https://www.blocktrail.com/tBCC/tx",
+            "URI_PREFIX": "bitcoincash",
+            "CASHADDRESS": true,
+            "URIPREFIX": "bchtest:"
         }
     }
 }

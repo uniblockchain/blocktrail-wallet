@@ -19,6 +19,9 @@
                     pinOnOpen: pinOnOpen,
                     activeWallet: getActiveWallet,
                     loadingData: loadingData
+                },
+                params: {
+                    networkChange: false
                 }
             })
             .state("app.wallet.summary", {
@@ -87,26 +90,23 @@
                         templateUrl: "js/modules/wallet/controllers/send/send.tpl.html",
                         controller: "SendCtrl"
                     }
+                },
+                params: {
+                    sendInput : null
                 }
             })
             .state("app.wallet.send.qrcode", {
                 url: "/scan?backdrop",
                 data: {
-                    clearHistory: false,
-                    excludeFromHistory: true        //never add this state to the history stack
+                    clearHistory: false
                 },
                 views: {
                     "overlayView": {
-                        templateProvider: function($stateParams, $log) {
-                            $log.debug("set the backdrop", $stateParams);
-                            if ($stateParams.backdrop) {
-                                return "<div class='scan-screen'><h1>Loading...</h1></div>";
-                            } else {
-                                return "";
-                            }
-                        },
                         controller: "SendScanQRCtrl"
                     }
+                },
+                params: {
+                    promoCodeRedeem : false
                 }
             })
             .state("app.wallet.send.contacts", {

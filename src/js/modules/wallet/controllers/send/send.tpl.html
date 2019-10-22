@@ -8,7 +8,7 @@
     <ion-nav-buttons side="right">
         <div class="button button-clear button-filtercontacts {{ !($state.current.name == 'app.wallet.send.contacts') && 'hide' || '' }}"
              ng-click="showFilterOptions();"
-        ><i class="icon-filter"></i>
+        ><i class="icon-cog"></i>
         </div>
     </ion-nav-buttons>
 
@@ -81,6 +81,8 @@
                                raw-model="btcValueRaw"
                                ng-change="setFiat(); sendInputForm.fiatValue.$setDirty(); fetchFee();"
                                ng-enter="blurInput($event)"
+                               ng-focus="clearZeroBTCAmountOnFocus()"
+                               ng-disabled="sendInput.inputDisabled"
                                tabindex="{{ !fiatFirst && 1 || -1 }}"/>
                         <div class="label-group">
                             <span class="placeholder-label">{{ 'AMOUNT_PLACEHOLDER' | translate }}</span>
@@ -97,7 +99,9 @@
                                ng-model="sendInput.fiatValue"
                                raw-model="fiatValueRaw"
                                ng-change="setBTC(); sendInputForm.btcValue.$setDirty(); fetchFee();"
+                               ng-disabled="sendInput.inputDisabled"
                                ng-enter="blurInput($event)"
+                               ng-focus="clearZeroFiatAmountOnFocus()"
                                tabindex="{{ fiatFirst && 1 || -1 }}"/>
                         <div class="label-group">
                             <span class="placeholder-label">{{ 'AMOUNT_PLACEHOLDER' | translate }}</span>
@@ -105,8 +109,10 @@
                             <span class="spacer">{{ fiatValueRaw }}</span>
                         </div>
                     </div>
-                    <div class="input-swapping-overlay" ng-click="swapInputs()">
-                        <i class="swap-icon ion-arrow-swap"></i>
+                    <div class="input-swapping-overlay"
+                         ng-show="!sendInput.inputDisabled"
+                    >
+                        <i class="swap-icon ion-arrow-swap" ng-click="swapInputs()"></i>
                     </div>
                 </div>
             </div>
@@ -146,7 +152,11 @@
                     </div>
                     <div class="col text-center">
                         <div class="option">
-                            <a class="qrcode" ui-sref="app.wallet.send.qrcode" ng-click="dismissMessage();"><i class="icon-qrcode"></i></a>
+                            <a
+                                class="qrcode"
+                                ui-sref="app.wallet.send.qrcode"
+                                ng-click="dismissMessage();"
+                            ><i class="icon-qrcode"></i></a>
                             <span class="label">{{ 'QR' | translate }}</span>
                         </div>
                     </div>

@@ -6,12 +6,12 @@
 
     function WalletCtrl($rootScope, $timeout, $scope, $state, $filter, $translate, $ionicNavBarDelegate, $cordovaSocialSharing, $cordovaToast,
                         CONFIG, modalService, localSettingsService, settingsService, activeWallet, walletsManagerService, Currencies, Contacts, glideraService,
-                        trackingService) {
+                        trackingService, $ionicLoading, $log, $stateParams) {
 
         var walletData = walletsManagerService.getActiveWalletReadOnlyData();
         var localSettingsData = localSettingsService.getReadOnlyLocalSettingsData();
 
-        function hideLoading() {
+        function hideSplashscreen() {
             $timeout(function() {
                 $rootScope.hideLoadingScreen = true;
 
@@ -23,10 +23,10 @@
             });
         }
 
-        hideLoading();
+        hideSplashscreen();
 
         $scope.$on('$ionicView.enter', function() {
-            hideLoading();
+            hideSplashscreen();
             $ionicNavBarDelegate.showBar(true);
         });
 
@@ -43,7 +43,7 @@
         var buyBTCNavItem = {
             stateHref: $state.href("app.wallet.buybtc.choose"),
             activeStateName: "app.wallet.buybtc",
-            linkText: "BUYBTC_NAVTITLE",
+            linkText: "BUYBTC",
             linkIcon: "ion-card",
             isHidden: !CONFIG.NETWORKS[$scope.walletData.networkType].BUYBTC
         };
@@ -114,7 +114,14 @@
             modalService.select({
                     options: prepareWalletListOptions(walletsManagerService.getWalletsList())
                 })
-                .then(setActiveWalletHandler);
+                .then(setActiveWalletHandler)
+                // hide loading
+                .then(function() {
+                    $ionicLoading.hide();
+                }, function(e) {
+                    $ionicLoading.hide();
+                    throw e;
+                });
         }
 
         /**
@@ -133,10 +140,17 @@
 
             if(walletsList.length > 2) {
                 walletsList.forEach(function(wallet) {
+                    var label;
+                    if (CONFIG.DEBUG) {
+                        label = CONFIG.NETWORKS[wallet.network].TICKER + " " + $filter("satoshiToCoin")(wallet.balance, wallet.network, 4) + " " + wallet.identifier;
+                    } else {
+                        label = CONFIG.NETWORKS[wallet.network].TICKER + " " + wallet.identifier;
+                    }
+
                     list.push({
                         value: wallet.uniqueIdentifier,
                         selected: walletData.uniqueIdentifier === wallet.uniqueIdentifier,
-                        label: CONFIG.NETWORKS[wallet.network].TICKER + " " + $filter("satoshiToCoin")(wallet.balance, wallet.network, 4) + " " + wallet.identifier
+                        label: label
                     })
                 });
             } else {
@@ -175,12 +189,21 @@
                 return;
             }
 
-            $timeout(function() {
-                walletsManagerService.setActiveWalletByUniqueIdentifier(uniqueIdentifier)
-                    .then(function() {
-                        $state.transitionTo("app.wallet.summary", null, { reload: true, inherit: false });
+            $ionicLoading.show();
+
+            return walletsManagerService.setActiveWalletByUniqueIdentifier(uniqueIdentifier)
+                .then(function() {
+                    $state.transitionTo("app.wallet.summary", { networkChange: true }, { reload: true, inherit: false });
+                }).catch(function (err) {
+                    var bodyMessage = "MSG_FAILED_UNKNOWN";
+                    if (err.name == "web_sql_went_bad" || err.name == "indexeddb_went_bad") {
+                       bodyMessage = "MSG_STORAGE_EXCEEDED";
+                    }
+
+                    modalService.alert({
+                        body: bodyMessage
                     });
-            });
+                });
         }
 
         /**
@@ -198,8 +221,8 @@
          * Sync contacts
          */
         function syncContacts() {
-            // sync any changes to contacts, if syncing enabled
-            if (localSettingsData.isEnableContacts) {
+            // sync any changes to contacts, if syncing enabled (and it is not a network change)
+            if (localSettingsData.isEnableContacts && !$stateParams.networkChange) {
                 Contacts.sync()
                     .then(function() {
                         //rebuild the cached contacts list
@@ -207,7 +230,7 @@
                     })
                     .then(function() {
                         var data = {
-                            // TODO Review the logic related to 'contactsLastSync' discuss with Ruben,
+                            // TODO Review the logic related to 'contactsLastSync'
                             // TODO we do not use it right no
                             contactsLastSync: new Date().valueOf(),
                             isPermissionContacts: true
